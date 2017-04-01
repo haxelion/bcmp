@@ -1,0 +1,12 @@
+[package]
+name = "bcmp"
+version = "0.1.0"
+authors = ["Charles Hubain <github@haxelion.eu>"]
+description = "bcmp offers fast common substring enumeration for binary data"
+documentation = "https://docs.rs/bcmpk"
+homepage = "https://github.com/haxelion/bcmp"
+repository = "https://github.com/haxelion/bcmp"
+license = "MIT"
+
+[dependencies]
+bytepack = "0.3.1"

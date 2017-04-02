@@ -184,5 +184,97 @@ pub fn longest_common_substrings<T: MatchKey>(first: &[u8], second: &[u8], numbe
     return top;
 }
 
+pub fn patch_set<T: MatchKey>(first: &[u8], second: &[u8]) -> Vec<Match> {
+    let mut match_iter = MatchIterator::<T>::new(first, second);
+    let mut patches = Vec::<Match>::new();
+    // Always push first patch
+    if let Some(m) = match_iter.next() {
+        patches.push(m);
+    }
+    for mut m in match_iter {
+        // Determine how the new match fit in the patch set.
+        let last = patches.len() - 1;
+        // If it covers more of the second file it is interesting.
+        if m.second_end() > patches[last].second_end() {
+            // If it's just better than the last patch then replace it
+            if m.second_pos == patches[last].second_pos {
+                patches[last] = m;
+            }
+            // If it encompasses the last patch, truncate it and replace it
+            else if m.second_pos < patches[last].second_pos {
+                let overlap = patches[last].second_pos - m.second_pos;
+                m.first_pos += overlap;
+                m.second_pos += overlap;
+                m.length -= overlap;
+                patches[last] = m;
+            }
+            // If it's overlaping, append it but shorten it (because of the enumeration algorithm,
+            // this makes it possible to replace it by another overlaping patch
+            else if m.second_pos > patches[last].second_pos && m.second_pos < patches[last].second_end() {
+                let overlap = patches[last].second_end() - m.second_pos;
+                m.first_pos += overlap;
+                m.second_pos += overlap;
+                m.length -= overlap;
+                patches.push(m);
+            }
+            // Else just append it.
+            else {
+                patches.push(m);
+            }
+        }
+    }
+    return patches;
+}
+
+pub fn unique_strings<T: MatchKey>(first: &[u8], second: &[u8]) -> Vec<(usize,usize)> {
+    let mut first_cursor = Cursor::new(first);
+    let mut second_cursor = Cursor::new(second);
+    let map = build_map::<T>(&mut first_cursor);
+    let second_len = second.len() - size_of::<T>() + 1;
+
+    let mut uniques = Vec::<(usize,usize)>::new();
+    let mut current : Option<(usize,usize)> = None;
+
+    for i in 0..second_len {
+        second_cursor.set_position(i as u64);
+        let v = second_cursor.unpack::<T>().unwrap();
+        // v exists in first: terminate an existing unique string
+        if map.contains_key(&v) {
+            if let Some(mut unique) = current.take() {
+                // Eliminate the aliasing from left
+                if unique.0 > 0 {
+                    unique.0 += size_of::<T>() - 1;
+                }
+                // Append if non-empty
+                if unique.0 < unique.1 {
+                    uniques.push(unique);
+                }
+            }
+        }
+        // v doesn't exist in first: start or extend a unique string
+        else {
+            current = match current {
+                Some((start, _)) => Some((start, i + 1)),
+                None => Some((i, i + 1))
+            };
+        }
+    }
+    // Terminate the last unique string
+    if let Some(mut unique) = current.take() {
+        // Eliminate the aliasing from left
+        if unique.0 > 0 {
+            unique.0 += size_of::<T>() - 1;
+        }
+        // Also has aliasing from the right because it is the last
+        unique.1 += size_of::<T>() - 1;
+        // Append if non-empty
+        if unique.0 < unique.1 {
+            uniques.push(unique);
+        }
+    }
+
+    return uniques;
+}
+
 #[cfg(test)]
 mod tests;

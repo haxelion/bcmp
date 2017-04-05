@@ -1,3 +1,8 @@
+//! `bcmp` is a simple crate which offers data comparison mechanisms which go beyond the simple 
+//! equality. It only operates on byte slices, hence its name, and relies on efficiently finding 
+//! common substrings between two blob of data. This is implemented using `HashMap` which should 
+//! offer linear time operation provided the [`MatchKey`](trait.MatchKey.html) is large enough.
+
 extern crate bytepack;
 
 use std::cmp::Eq;
@@ -9,6 +14,13 @@ use std::mem::size_of;
 
 use bytepack::{Packed, Unpacker};
 
+/// Trait marking types which can be used as a matching key in the `HashMap`
+///
+/// The larger the `MatchKey` is, the faster the implementation will be but 
+/// the memory consumption and minimum common substring length will proportionally increase.
+/// For example a `u32` `MatchKey` allows to find common substring equal or longer than 4 bytes 
+/// while a `u64` `MatchKey` will be significantly faster but consumes twice the memory and only 
+/// allows to find common substring equal or longer than 8 bytes.
 pub trait MatchKey: Packed + Hash + Eq + Copy {}
 
 impl MatchKey for u8      {}
@@ -18,6 +30,7 @@ impl MatchKey for [u8;4]  {}
 impl MatchKey for [u8;5]  {}
 impl MatchKey for [u8;6]  {}
 impl MatchKey for [u8;7]  {}
+impl MatchKey for [u8;8]  {}
 impl MatchKey for u16     {}
 impl MatchKey for [u16;2] {}
 impl MatchKey for [u16;3] {}
@@ -25,6 +38,7 @@ impl MatchKey for [u16;4] {}
 impl MatchKey for [u16;5] {}
 impl MatchKey for [u16;6] {}
 impl MatchKey for [u16;7] {}
+impl MatchKey for [u16;8] {}
 impl MatchKey for u32     {}
 impl MatchKey for [u32;2] {}
 impl MatchKey for [u32;3] {}
@@ -32,6 +46,7 @@ impl MatchKey for [u32;4] {}
 impl MatchKey for [u32;5] {}
 impl MatchKey for [u32;6] {}
 impl MatchKey for [u32;7] {}
+impl MatchKey for [u32;8] {}
 impl MatchKey for u64     {}
 impl MatchKey for [u64;2] {}
 impl MatchKey for [u64;3] {}
@@ -42,8 +57,8 @@ impl MatchKey for [u64;7] {}
 impl MatchKey for [u64;8] {}
 
 fn build_map<T: MatchKey>(c: &mut Cursor<&[u8]>) -> HashMap<T,Vec<usize>> {
-    let mut map = HashMap::<T, Vec<usize>>::new();
     let size = c.get_ref().len() - size_of::<T>() + 1;
+    let mut map = HashMap::<T, Vec<usize>>::with_capacity(size);
     for i in 0..size {
         c.set_position(i as u64);
         let v = c.unpack::<T>().unwrap();
@@ -55,14 +70,19 @@ fn build_map<T: MatchKey>(c: &mut Cursor<&[u8]>) -> HashMap<T,Vec<usize>> {
     return map;
 }
 
+/// A structure representing a matching substring between two pieces of data.
 #[derive(Clone,Copy,Debug)]
 pub struct Match {
+    /// Start of the string in the first piece of data.
     pub first_pos: usize,
+    /// Start of the string in the second piece of data.
     pub second_pos: usize,
+    /// Length of the string.
     pub length: usize,
 }
 
 impl Match {
+    /// Allocate a new `Match`.
     pub fn new(first_pos: usize, second_pos: usize, length: usize) -> Match {
         Match {
             first_pos: first_pos,
@@ -70,16 +90,38 @@ impl Match {
             length: length,
         }
     }
-
+    /// `first_pos + length`
     pub fn first_end(&self) -> usize {
         self.first_pos + self.length
     }
-
+    /// `second_pos + length`
     pub fn second_end(&self) -> usize {
         self.second_pos + self.length
     }
 }
 
+/// An iterator over all the [`Match`](struct.Match.html) bewteen two pieces of data.
+///
+/// The [`Match`](struct.Match.html) are returned in the order of the second file data. This means  
+/// the [`second_pos`](struct.Match.html#second_pos.v) of the next [`Match`](struct.Match.html) is 
+/// always equal or greater than the previous [`Match`](struct.Match.html).
+///
+/// For efficiency reasons, submatches are never returned. This means if we iterate over the 
+/// [`Match`](struct.Match.html) of `"abcd"` and `"012abcd34"`, only `"abcd"` is returned. The 
+/// submatches `"abc"`, `"bcd"`, `"ab"`, ... are not returned but can easily be computed.
+///
+/// # Examples
+/// 
+/// ```
+/// use bcmp::MatchIterator;
+///
+/// let a = "abcdefg";
+/// let b = "012abc34cdef56efg78abcdefg";
+/// let match_iter = MatchIterator::<u16>::new(a.as_bytes(), b.as_bytes());
+/// for m in match_iter {
+///     println!("Match: {:}", &a[m.first_pos..m.first_end()]);
+/// }
+/// ```
 pub struct MatchIterator<'a, T: MatchKey> {
     first: Cursor<&'a [u8]>,
     second: Cursor<&'a [u8]>,
@@ -91,6 +133,7 @@ pub struct MatchIterator<'a, T: MatchKey> {
 }
 
 impl<'a, T: MatchKey> MatchIterator<'a, T> {
+    /// Allocate a new iterator over the matches between two byte slices
     pub fn new(first: &'a [u8], second: &'a [u8]) -> MatchIterator<'a, T> {
         let second_len = second.len() - size_of::<T>() + 1;
         let mut first_cursor = Cursor::new(first);
@@ -106,7 +149,8 @@ impl<'a, T: MatchKey> MatchIterator<'a, T> {
             matched: HashMap::new()
         }
     }
-
+    /// Reset the iterator to its start. This allows to iterate multiple times over the matches 
+    /// without wasting time regenerating the `HashMap`.
     pub fn reset(&mut self) {
         self.i = 0;
         self.j = 0;
@@ -149,6 +193,7 @@ impl<'a, T: MatchKey> Iterator for MatchIterator<'a, T> {
     }
 }
 
+/// Return the longest common substring between two byte slices.
 pub fn longest_common_substring<T: MatchKey>(first: &[u8], second: &[u8]) -> Match {
     let mut longest = Match::new(0,0,0);
     let match_iter = MatchIterator::<T>::new(first, second);
@@ -160,6 +205,8 @@ pub fn longest_common_substring<T: MatchKey>(first: &[u8], second: &[u8]) -> Mat
     return longest;
 }
 
+/// Return the `N` longest common substrings between two byte slices. The vector is sorted in 
+/// decreasing order of  [`Match`](struct.Match.html) length.
 pub fn longest_common_substrings<T: MatchKey>(first: &[u8], second: &[u8], number: usize) -> Vec<Match> {
     let match_iter = MatchIterator::<T>::new(first, second);
     // Number +1 to avoid realocation when inserting
@@ -184,6 +231,12 @@ pub fn longest_common_substrings<T: MatchKey>(first: &[u8], second: &[u8], numbe
     return top;
 }
 
+/// Identify the smallest set of patches needed the build the second byte slice from the first.
+/// The returned set might be incomplete if some part of the second byte slice could not be found 
+/// in the first.
+///
+/// The result is highly dependent on the [`MatchKey`](trait.MatchKey.html) chosen. For example a 
+/// `u32` [`MatchKey`](trait.MatchKey.html) might cause holes of four bytes or less.
 pub fn patch_set<T: MatchKey>(first: &[u8], second: &[u8]) -> Vec<Match> {
     let mut match_iter = MatchIterator::<T>::new(first, second);
     let mut patches = Vec::<Match>::new();
@@ -226,6 +279,11 @@ pub fn patch_set<T: MatchKey>(first: &[u8], second: &[u8]) -> Vec<Match> {
     return patches;
 }
 
+/// Find the list of unique strings from the second byte slice which can't be found in the first.
+/// 
+/// The [`MatchKey`](trait.MatchKey.html) highly influence the result because it determines the 
+/// minimal length of a common string. The longer is the [`MatchKey`](trait.MatchKey.html), the more 
+/// unique strings will be found.
 pub fn unique_strings<T: MatchKey>(first: &[u8], second: &[u8]) -> Vec<(usize,usize)> {
     let mut first_cursor = Cursor::new(first);
     let mut second_cursor = Cursor::new(second);
@@ -259,7 +317,7 @@ pub fn unique_strings<T: MatchKey>(first: &[u8], second: &[u8]) -> Vec<(usize,us
             };
         }
     }
-    // Terminate the last unique string
+    // Terminate the remaining unique string
     if let Some(mut unique) = current.take() {
         // Eliminate the aliasing from left
         if unique.0 > 0 {

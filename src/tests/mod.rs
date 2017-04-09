@@ -2,6 +2,7 @@ use longest_common_substring;
 use longest_common_substrings;
 use patch_set;
 use unique_strings;
+use ukkonen::SuffixTree;
 
 #[test]
 fn lcs() {
@@ -125,4 +126,11 @@ fn us4() {
     assert!(us[0].1 == 15);
     let us = unique_strings::<u8>(a.as_bytes(), b.as_bytes());
     assert!(us.len() == 0);
+}
+
+#[test]
+fn stree1() {
+    let s = "banana";
+    let stree = SuffixTree::new(s.as_bytes());
+    println!("{}", &stree.to_graphviz(s.as_bytes()));
 }

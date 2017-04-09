@@ -334,5 +334,7 @@ pub fn unique_strings<T: MatchKey>(first: &[u8], second: &[u8]) -> Vec<(usize,us
     return uniques;
 }
 
+pub mod ukkonen;
+
 #[cfg(test)]
 mod tests;

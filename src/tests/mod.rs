@@ -1,7 +1,7 @@
 use longest_common_substring;
 use longest_common_substrings;
 use patch_set;
-use unique_strings;
+use hashmatch::unique_strings;
 use ukkonen::SuffixTree;
 
 #[test]

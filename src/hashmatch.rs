@@ -79,6 +79,7 @@ fn build_map<T: HashMatchKey>(c: &mut Cursor<&[u8]>) -> HashMap<T,Vec<usize>> {
 /// # Examples
 /// 
 /// ```
+/// use bcmp::MatchIterator;
 /// use bcmp::hashmatch::HashMatchIterator;
 ///
 /// let a = "abcdefg";

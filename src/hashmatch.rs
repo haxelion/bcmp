@@ -8,7 +8,6 @@ use std::mem::size_of;
 use bytepack::{Packed, Unpacker};
 
 use Match;
-use MatchIterator;
 
 /// Trait marking types which can be used as a matching key in the `HashMap`
 ///
@@ -79,7 +78,6 @@ fn build_map<T: HashMatchKey>(c: &mut Cursor<&[u8]>) -> HashMap<T,Vec<usize>> {
 /// # Examples
 /// 
 /// ```
-/// use bcmp::MatchIterator;
 /// use bcmp::hashmatch::HashMatchIterator;
 ///
 /// let a = "abcdefg";
@@ -99,9 +97,9 @@ pub struct HashMatchIterator<'a, T: HashMatchKey> {
     matched: HashMap<isize, usize>
 }
 
-impl<'a, T: HashMatchKey> MatchIterator<'a> for HashMatchIterator<'a, T> {
+impl<'a, T: HashMatchKey> HashMatchIterator<'a, T> {
     /// Allocate a new iterator over the matches between two byte slices
-    fn new(first: &'a [u8], second: &'a [u8]) -> HashMatchIterator<'a, T> {
+    pub fn new(first: &'a [u8], second: &'a [u8]) -> HashMatchIterator<'a, T> {
         let second_len = second.len() - size_of::<T>() + 1;
         let mut first_cursor = Cursor::new(first);
         let second_cursor = Cursor::new(second);
@@ -118,7 +116,7 @@ impl<'a, T: HashMatchKey> MatchIterator<'a> for HashMatchIterator<'a, T> {
     }
     /// Reset the iterator to its start. This allows to iterate multiple times over the matches 
     /// without wasting time regenerating the `HashMap`.
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.i = 0;
         self.j = 0;
         self.matched.clear();

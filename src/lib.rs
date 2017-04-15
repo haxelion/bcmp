@@ -10,7 +10,10 @@ pub mod ukkonen;
 #[cfg(test)]
 mod tests;
 
+use std::iter::Iterator;
+
 use hashmatch::{HashMatchKey, HashMatchIterator};
+use ukkonen::TreeMatchIterator;
 
 /// A structure representing a matching substring between two pieces of data.
 #[derive(Clone,Copy,Debug)]
@@ -42,15 +45,46 @@ impl Match {
     }
 }
 
-pub trait MatchIterator<'a> {
-    fn new(first: &'a[u8], second: &'a[u8]) -> Self;
-    fn reset(&mut self);
+#[derive(Clone,Copy,Debug)]
+pub enum AlgoSpec {
+    HashMatch(usize),
+    Ukkonen(usize)
+}
+
+pub struct MatchIterator<'a> {
+    iter: Box<Iterator<Item=Match> + 'a>
+}
+
+impl<'a> MatchIterator<'a> {
+    pub fn new(first: &'a [u8], second: &'a [u8], algo_spec: AlgoSpec) -> MatchIterator<'a> {
+        MatchIterator {
+            iter: match algo_spec {
+                AlgoSpec::Ukkonen(mml) => Box::new(TreeMatchIterator::new(first, second, mml)),
+                AlgoSpec::HashMatch(1) => Box::new(HashMatchIterator::<u8>::new(first, second)),
+                AlgoSpec::HashMatch(2) => Box::new(HashMatchIterator::<u16>::new(first, second)),
+                AlgoSpec::HashMatch(3) => Box::new(HashMatchIterator::<[u8;3]>::new(first, second)),
+                AlgoSpec::HashMatch(4) => Box::new(HashMatchIterator::<u32>::new(first, second)),
+                AlgoSpec::HashMatch(5) => Box::new(HashMatchIterator::<[u8;5]>::new(first, second)),
+                AlgoSpec::HashMatch(6) => Box::new(HashMatchIterator::<[u16;3]>::new(first, second)),
+                AlgoSpec::HashMatch(7) => Box::new(HashMatchIterator::<[u8;7]>::new(first, second)),
+                AlgoSpec::HashMatch(8) => Box::new(HashMatchIterator::<u64>::new(first, second)),
+                _ => panic!("Unsupported AlgoSpec")
+            }
+        }
+    }
+}
+
+impl<'a> Iterator for MatchIterator<'a> {
+    type Item = Match;
+    fn next(&mut self) -> Option<Match> {
+        self.iter.next()
+    }
 }
 
 /// Return the longest common substring between two byte slices.
-pub fn longest_common_substring<T: HashMatchKey>(first: &[u8], second: &[u8]) -> Match {
+pub fn longest_common_substring(first: &[u8], second: &[u8], algo_spec: AlgoSpec) -> Match {
     let mut longest = Match::new(0,0,0);
-    let match_iter = HashMatchIterator::<T>::new(first, second);
+    let match_iter = MatchIterator::new(first, second, algo_spec);
     for m in match_iter {
         if m.length > longest.length {
             longest = m;
@@ -61,8 +95,8 @@ pub fn longest_common_substring<T: HashMatchKey>(first: &[u8], second: &[u8]) ->
 
 /// Return the `N` longest common substrings between two byte slices. The vector is sorted in 
 /// decreasing order of  [`Match`](struct.Match.html) length.
-pub fn longest_common_substrings<T: HashMatchKey>(first: &[u8], second: &[u8], number: usize) -> Vec<Match> {
-    let match_iter = HashMatchIterator::<T>::new(first, second);
+pub fn longest_common_substrings(first: &[u8], second: &[u8], algo_spec: AlgoSpec, number: usize) -> Vec<Match> {
+    let match_iter = MatchIterator::new(first, second, algo_spec);
     // Number +1 to avoid realocation when inserting
     let mut top = Vec::<Match>::with_capacity(number + 1);
     let mut threshold = 0;
@@ -91,8 +125,8 @@ pub fn longest_common_substrings<T: HashMatchKey>(first: &[u8], second: &[u8], n
 ///
 /// The result is highly dependent on the [`HashMatchKey`](trait.HashMatchKey.html) chosen. For example a 
 /// `u32` [`HashMatchKey`](trait.HashMatchKey.html) might cause holes of four bytes or less.
-pub fn patch_set<T: HashMatchKey>(first: &[u8], second: &[u8]) -> Vec<Match> {
-    let mut match_iter = HashMatchIterator::<T>::new(first, second);
+pub fn patch_set(first: &[u8], second: &[u8], algo_spec: AlgoSpec) -> Vec<Match> {
+    let mut match_iter = MatchIterator::new(first, second, algo_spec);
     let mut patches = Vec::<Match>::new();
     // Always push first patch
     if let Some(m) = match_iter.next() {

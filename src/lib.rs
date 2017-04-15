@@ -1,19 +1,20 @@
 //! `bcmp` is a simple crate which offers data comparison mechanisms which go beyond the simple 
 //! equality. It only operates on byte slices, hence its name, and relies on efficiently finding 
-//! common substrings between two blob of data. This is implemented using `HashMap` which should 
-//! offer linear time operation provided the [`MatchKey`](trait.MatchKey.html) is large enough.
+//! common substrings between two blob of data. The implementation relies on two different linear 
+//! time algorithms: a `HashMap` based algorithm called [`HashMatch`](hashmatch/index.html) and 
+//! a suffix tree built using Ukkonen algorithm called [`TreeMatch`](treematch/index.html).
 
 extern crate bytepack;
 
 pub mod hashmatch;
-pub mod ukkonen;
+pub mod treematch;
 #[cfg(test)]
 mod tests;
 
 use std::iter::Iterator;
 
 use hashmatch::{HashMatchKey, HashMatchIterator};
-use ukkonen::TreeMatchIterator;
+use treematch::TreeMatchIterator;
 
 /// A structure representing a matching substring between two pieces of data.
 #[derive(Clone,Copy,Debug)]
@@ -45,12 +46,28 @@ impl Match {
     }
 }
 
+/// An enumeration describing the algorithm specification: either `HashMatch` or `TreeMatch` with 
+/// the minimal matching length parameter.
 #[derive(Clone,Copy,Debug)]
 pub enum AlgoSpec {
+    /// The parameter is the minimal matching length which will determine the 
+    /// [`HashMatchKey`](hashmatch/trait.HashMatchKey.html) used.
     HashMatch(usize),
-    Ukkonen(usize)
+    /// The parameter is the minimal matching length.
+    TreeMatch(usize)
 }
 
+/// A generic wrapper for [`HashMatchIterator`](hashmatch/struct.HashMatchIterator.html) and 
+/// [`TreeMatchIterator`](treematch/struct.TreeMatchIterator.html).
+///
+/// Both algorithms will return the same matches but the exact order may vary. 
+/// The only ordering guarantee is that the [`Match`](struct.Match.html) will be returned in 
+/// ascending order of the [`second_pos`](struct.Match.html#second_pos.v) field.
+///
+/// For efficiency reasons, submatches are never returned. This means if we iterate over the 
+/// [`Match`](struct.Match.html) of `"abcd"` and `"012abcd34"`, only `"abcd"` is returned. The 
+/// submatches `"abc"`, `"bcd"`, `"ab"`, ... are never returned but can easily be computed from the 
+/// encompassing [`Match`](struct.Match.html).
 pub struct MatchIterator<'a> {
     iter: Box<Iterator<Item=Match> + 'a>
 }
@@ -59,7 +76,7 @@ impl<'a> MatchIterator<'a> {
     pub fn new(first: &'a [u8], second: &'a [u8], algo_spec: AlgoSpec) -> MatchIterator<'a> {
         MatchIterator {
             iter: match algo_spec {
-                AlgoSpec::Ukkonen(mml) => Box::new(TreeMatchIterator::new(first, second, mml)),
+                AlgoSpec::TreeMatch(mml) => Box::new(TreeMatchIterator::new(first, second, mml)),
                 AlgoSpec::HashMatch(1) => Box::new(HashMatchIterator::<u8>::new(first, second)),
                 AlgoSpec::HashMatch(2) => Box::new(HashMatchIterator::<u16>::new(first, second)),
                 AlgoSpec::HashMatch(3) => Box::new(HashMatchIterator::<[u8;3]>::new(first, second)),
@@ -68,6 +85,18 @@ impl<'a> MatchIterator<'a> {
                 AlgoSpec::HashMatch(6) => Box::new(HashMatchIterator::<[u16;3]>::new(first, second)),
                 AlgoSpec::HashMatch(7) => Box::new(HashMatchIterator::<[u8;7]>::new(first, second)),
                 AlgoSpec::HashMatch(8) => Box::new(HashMatchIterator::<u64>::new(first, second)),
+                AlgoSpec::HashMatch(10) => Box::new(HashMatchIterator::<[u16;5]>::new(first, second)),
+                AlgoSpec::HashMatch(12) => Box::new(HashMatchIterator::<[u32;3]>::new(first, second)),
+                AlgoSpec::HashMatch(14) => Box::new(HashMatchIterator::<[u16;7]>::new(first, second)),
+                AlgoSpec::HashMatch(16) => Box::new(HashMatchIterator::<[u64;2]>::new(first, second)),
+                AlgoSpec::HashMatch(20) => Box::new(HashMatchIterator::<[u32;5]>::new(first, second)),
+                AlgoSpec::HashMatch(24) => Box::new(HashMatchIterator::<[u64;3]>::new(first, second)),
+                AlgoSpec::HashMatch(28) => Box::new(HashMatchIterator::<[u32;7]>::new(first, second)),
+                AlgoSpec::HashMatch(32) => Box::new(HashMatchIterator::<[u64;4]>::new(first, second)),
+                AlgoSpec::HashMatch(40) => Box::new(HashMatchIterator::<[u64;5]>::new(first, second)),
+                AlgoSpec::HashMatch(48) => Box::new(HashMatchIterator::<[u64;6]>::new(first, second)),
+                AlgoSpec::HashMatch(56) => Box::new(HashMatchIterator::<[u64;7]>::new(first, second)),
+                AlgoSpec::HashMatch(64) => Box::new(HashMatchIterator::<[u64;8]>::new(first, second)),
                 _ => panic!("Unsupported AlgoSpec")
             }
         }
@@ -76,6 +105,7 @@ impl<'a> MatchIterator<'a> {
 
 impl<'a> Iterator for MatchIterator<'a> {
     type Item = Match;
+    #[inline]
     fn next(&mut self) -> Option<Match> {
         self.iter.next()
     }
@@ -120,11 +150,9 @@ pub fn longest_common_substrings(first: &[u8], second: &[u8], algo_spec: AlgoSpe
 }
 
 /// Identify the smallest set of patches needed the build the second byte slice from the first.
+/// 
 /// The returned set might be incomplete if some part of the second byte slice could not be found 
-/// in the first.
-///
-/// The result is highly dependent on the [`HashMatchKey`](trait.HashMatchKey.html) chosen. For example a 
-/// `u32` [`HashMatchKey`](trait.HashMatchKey.html) might cause holes of four bytes or less.
+/// in the first. The result is highly dependent on the minimal matching length chosen.
 pub fn patch_set(first: &[u8], second: &[u8], algo_spec: AlgoSpec) -> Vec<Match> {
     let mut match_iter = MatchIterator::new(first, second, algo_spec);
     let mut patches = Vec::<Match>::new();

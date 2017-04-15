@@ -3,16 +3,15 @@ use longest_common_substring;
 use longest_common_substrings;
 use patch_set;
 use hashmatch::unique_strings;
-use ukkonen::SuffixTree;
 
 const ALGO_SPECS_4: &'static [AlgoSpec] = &[
     AlgoSpec::HashMatch(1), AlgoSpec::HashMatch(2), AlgoSpec::HashMatch(3), AlgoSpec::HashMatch(4),
-    AlgoSpec::Ukkonen(1), AlgoSpec::Ukkonen(2), AlgoSpec::Ukkonen(3), AlgoSpec::Ukkonen(4),
+    AlgoSpec::TreeMatch(1), AlgoSpec::TreeMatch(2), AlgoSpec::TreeMatch(3), AlgoSpec::TreeMatch(4),
 ];
 
 const ALGO_SPECS_8: &'static [AlgoSpec] = &[
     AlgoSpec::HashMatch(1), AlgoSpec::HashMatch(2), AlgoSpec::HashMatch(4), AlgoSpec::HashMatch(8),
-    AlgoSpec::Ukkonen(1), AlgoSpec::Ukkonen(2), AlgoSpec::Ukkonen(4), AlgoSpec::Ukkonen(8),
+    AlgoSpec::TreeMatch(1), AlgoSpec::TreeMatch(2), AlgoSpec::TreeMatch(4), AlgoSpec::TreeMatch(8),
 ];
 
 #[test]

@@ -67,14 +67,6 @@ fn build_map<T: HashMatchKey>(c: &mut Cursor<&[u8]>) -> HashMap<T,Vec<usize>> {
 
 /// An iterator over all the [`Match`](struct.Match.html) bewteen two pieces of data.
 ///
-/// The [`Match`](struct.Match.html) are returned in the order of the second file data. This means  
-/// the [`second_pos`](struct.Match.html#second_pos.v) of the next [`Match`](struct.Match.html) is 
-/// always equal or greater than the previous [`Match`](struct.Match.html).
-///
-/// For efficiency reasons, submatches are never returned. This means if we iterate over the 
-/// [`Match`](struct.Match.html) of `"abcd"` and `"012abcd34"`, only `"abcd"` is returned. The 
-/// submatches `"abc"`, `"bcd"`, `"ab"`, ... are not returned but can easily be computed.
-///
 /// # Examples
 /// 
 /// ```

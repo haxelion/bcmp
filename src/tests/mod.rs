@@ -3,6 +3,7 @@ use longest_common_substring;
 use longest_common_substrings;
 use patch_set;
 use hashmatch::unique_strings;
+use treematch::SuffixTree;
 
 const ALGO_SPECS_4: &'static [AlgoSpec] = &[
     AlgoSpec::HashMatch(1), AlgoSpec::HashMatch(2), AlgoSpec::HashMatch(3), AlgoSpec::HashMatch(4),
@@ -147,4 +148,11 @@ fn us4() {
     assert!(us[0].1 == 15);
     let us = unique_strings::<u8>(a.as_bytes(), b.as_bytes());
     assert!(us.len() == 0);
+}
+
+#[test]
+fn stree() {
+    let a = "ABABABC";
+    let stree = SuffixTree::new(a.as_bytes());
+    println!("{}", stree.to_graphviz(a.as_bytes()));
 }

@@ -8,7 +8,7 @@ use std::usize;
 
 use Match;
 
-/// A node in the suffix tree.
+/// A node in the [`SuffixTree`](struct.SuffixTree.html)
 pub struct Node {
     /// The index in the data where the edge leading to this node starts.
     pub start: usize,
@@ -22,6 +22,7 @@ pub struct Node {
     pub suffix_link: Option<usize>,
 }
 
+/// A suffix tree.
 pub struct SuffixTree {
     /// A vector of [`Node`](struct.Node.html) composing this tree. The first element is the root 
     /// node.
@@ -117,7 +118,7 @@ impl SuffixTree {
                     self.nodes[active_node].edges[active_edge] = Some(leaf);
                     // Make a suffix link if there is a node waiting
                     if last_new_node.is_some() {
-                        self.nodes[last_new_node.unwrap()].suffix_link = Some(leaf);
+                        self.nodes[last_new_node.unwrap()].suffix_link = Some(active_node);
                         last_new_node = None;
                     }
                 }
@@ -187,7 +188,7 @@ impl SuffixTree {
                 self.nodes[active_node].edges[active_edge] = Some(leaf);
                 // Make a suffix link if there is a node waiting
                 if last_new_node.is_some() {
-                    self.nodes[last_new_node.unwrap()].suffix_link = Some(leaf);
+                    self.nodes[last_new_node.unwrap()].suffix_link = Some(active_node);
                     last_new_node = None;
                 }
             }
@@ -239,7 +240,7 @@ impl SuffixTree {
     }
 }
 
-/// An iterator over all the [`Match`](struct.Match.html) bewteen two pieces of data.
+/// An iterator over all the [`Match`](../struct.Match.html) bewteen two pieces of data.
 ///
 /// # Examples
 /// 
@@ -348,46 +349,39 @@ impl<'a> Iterator for TreeMatchIterator<'a> {
                                 }
                             }
                         }
+                        // Update the idx
+                        self.backtrace.last_mut().unwrap().1 = idx + 1;
+                        // Go down
                         self.depth += self.tree.nodes[next].edge_length();
                         self.backtrace.push((next,0));
                         break;
                     }
                     idx += 1;
                 }
-                // We went down one edge
-                if cur != self.backtrace.last().unwrap().0 {
-                    // Update the idx
-                    let before_last = self.backtrace.len() - 2;
-                    self.backtrace[before_last].1 = idx + 1;
-                }
-                // We went over all the possible edges without finding a node, we were on a leaf
-                else if self.backtrace.last().unwrap().1 == 0 {
-                    let m = Match::new(self.tree.nodes[cur].end - self.depth, self.i, self.match_length);
-                    // Go up one level
-                    self.depth -= self.tree.nodes[cur].edge_length();
-                    // Update the match length
-                    if self.depth < self.match_length {
-                        self.match_length = self.depth;
-                    }
-                    self.backtrace.pop();
-                    let delta = m.first_pos as isize - m.second_pos as isize;
-                    if !(self.matched.contains_key(&delta) && self.matched.get(&delta).unwrap() > &m.second_pos) {
-                        self.matched.insert(delta, m.second_pos + m.length);
-                        if self.backtrace.is_empty() {
-                            self.i += 1;
+                // If we are still on the same node
+                if cur == self.backtrace.last().unwrap().0 {
+                    // If we went over all the possible edges without finding a node, we were on a leaf
+                    if self.backtrace.last().unwrap().1 == 0 {
+                        // Update the idx
+                        self.backtrace.last_mut().unwrap().1 = idx + 1;
+                        // Handle the match
+                        let m = Match::new(self.tree.nodes[cur].end - self.depth, self.i, self.match_length);
+                        let delta = m.first_pos as isize - m.second_pos as isize;
+                        if !(self.matched.contains_key(&delta) && self.matched.get(&delta).unwrap() > &m.second_pos) {
+                            self.matched.insert(delta, m.second_pos + m.length);
+                            return Some(m);
                         }
-                        return Some(m);
                     }
-                }
-                // Just backtracking
-                else {
-                    // Go up one level
-                    self.depth -= self.tree.nodes[cur].edge_length();
-                    // Update the match length
-                    if self.depth < self.match_length {
-                        self.match_length = self.depth;
+                    // Else we just backtrack
+                    else {
+                        // Go up one level
+                        self.depth -= self.tree.nodes[cur].edge_length();
+                        // Update the match length
+                        if self.depth < self.match_length {
+                            self.match_length = self.depth;
+                        }
+                        self.backtrace.pop();
                     }
-                    self.backtrace.pop();
                 }
             }
             self.i += 1;

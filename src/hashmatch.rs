@@ -1,9 +1,9 @@
 //! HashMatch is a binary matching algorithm based on a `HashMap` to retrieve the begining of 
 //! matching strings.
 //!
-//! It relies on using a [`HashMatchKey`](enum.HashMatchKey.html) long enough to
+//! It relies on using a [`HashMatchKey`](trait.HashMatchKey.html) long enough to
 //! weed out "random" matches to obtain linear time performances. This 
-//! [`HashMatchKey`](enum.HashMatchKey.html) offers a tradeoff between the speed and the minimal 
+//! [`HashMatchKey`](trait.HashMatchKey.html) offers a tradeoff between the speed and the minimal 
 //! matching length.
 
 use std::cmp::Eq;
@@ -72,7 +72,7 @@ fn build_map<T: HashMatchKey>(c: &mut Cursor<&[u8]>) -> HashMap<T,Vec<usize>> {
     return map;
 }
 
-/// An iterator over all the [`Match`](struct.Match.html) bewteen two pieces of data.
+/// An iterator over all the [`Match`](../struct.Match.html) bewteen two pieces of data.
 ///
 /// # Examples
 /// 

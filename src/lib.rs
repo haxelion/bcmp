@@ -6,6 +6,9 @@
 //!
 //! # Examples
 //! 
+//! Iterate over the matches between two strings using [`HashMatch`](hashmatch/index.html) with a 
+//! minimum match length of 2 bytes:
+//!
 //! ```
 //! use bcmp::{AlgoSpec, MatchIterator};
 //!
@@ -14,6 +17,26 @@
 //! let match_iter = MatchIterator::new(a.as_bytes(), b.as_bytes(), AlgoSpec::HashMatch(2));
 //! for m in match_iter {
 //!     println!("Match: {:}", &a[m.first_pos..m.first_end()]);
+//! }
+//! ```
+//!
+//! Construct a patch set to build the file `b` from the file `a` using [`TreeMatch`](treematch/index.html) 
+//! with a minimum match length of 4 bytes:
+//! 
+//! ```no_run
+//! use std::fs::File;
+//! use std::io::Read;
+//! 
+//! use bcmp::{AlgoSpec, patch_set};
+//! 
+//! let mut a = Vec::<u8>::new();
+//! let mut b = Vec::<u8>::new();
+//! File::open("a").unwrap().read_to_end(&mut a);
+//! File::open("b").unwrap().read_to_end(&mut b);
+//!
+//! let ps = patch_set(&a, &b, AlgoSpec::TreeMatch(4));
+//! for patch in ps {
+//!     println!("b[0x{:x}..0x{:x}] == a[0x{:x}..0x{:x}]", patch.second_pos, patch.second_end(), patch.first_pos, patch.first_end());
 //! }
 //! ```
 

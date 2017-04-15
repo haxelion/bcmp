@@ -1,3 +1,11 @@
+//! HashMatch is a binary matching algorithm based on a `HashMap` to retrieve the begining of 
+//! matching strings.
+//!
+//! It relies on using a [`HashMatchKey`](enum.HashMatchKey.html) long enough to
+//! weed out "random" matches to obtain linear time performances. This 
+//! [`HashMatchKey`](enum.HashMatchKey.html) offers a tradeoff between the speed and the minimal 
+//! matching length.
+
 use std::cmp::Eq;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -9,13 +17,12 @@ use bytepack::{Packed, Unpacker};
 
 use Match;
 
-/// Trait marking types which can be used as a matching key in the `HashMap`
+/// Trait marking types which can be used as a matching key in the `HashMap`.
 ///
-/// The larger the `HashMatchKey` is, the faster the implementation will be but 
-/// the memory consumption and minimum common substring length will proportionally increase.
-/// For example a `u32` `HashMatchKey` allows to find common substring equal or longer than 4 bytes 
-/// while a `u64` `HashMatchKey` will be significantly faster but consumes twice the memory and only 
-/// allows to find common substring equal or longer than 8 bytes.
+/// The larger the `HashMatchKey` is, the faster the implementation will be but the minimal matching 
+/// length will proportionally increase. For example a `u32` `HashMatchKey` allows to find common 
+/// substring equal or longer than 4 bytes while a `u64` `HashMatchKey` will be significantly faster 
+/// but only allows to find common substring equal or longer than 8 bytes.
 pub trait HashMatchKey: Packed + Hash + Eq + Copy {}
 
 impl HashMatchKey for u8      {}

@@ -1,21 +1,35 @@
+//! TreeMatch is a binary matching algorithm based on a suffix tree to retrieve matching strings. 
+//!
+//! The suffix tree is built in linear time using Ukkonen's algorithm.
+
 use std::collections::HashMap;
 use std::iter::Iterator;
 use std::usize;
 
 use Match;
 
+/// A node in the suffix tree.
 pub struct Node {
-    start: usize,
-    end: usize,
-    edges: [Option<usize>; 257],
-    suffix_link: Option<usize>,
+    /// The index in the data where the edge leading to this node starts.
+    pub start: usize,
+    /// The index in the data where the edge leading to this node ends.
+    pub end: usize,
+    /// The potential sub nodes under this one. Each index in the array represent on of the 
+    /// possible byte value. The index `256` is reserved for the end of data. Each element value is 
+    /// an index in the `SuffixTree::nodes`(struct.SuffixTree.html#nodes.v) vector.
+    pub edges: [Option<usize>; 257],
+    /// Suffix link (see Ukkonen's algorithm).
+    pub suffix_link: Option<usize>,
 }
 
 pub struct SuffixTree {
+    /// A vector of [`Node`](struct.Node.html) composing this tree. The first element is the root 
+    /// node.
     pub nodes: Vec<Node>,
 }
 
 impl Node {
+    /// Allocate a new node with a leading edge `[start..end]`.
     pub fn new(start: usize, end: usize) -> Node {
         Node {
             start: start,
@@ -24,13 +38,14 @@ impl Node {
             suffix_link: None,
         }
     }
-
+    /// Returns this node leading edge length.
     pub fn edge_length(&self) -> usize {
         self.end - self.start
     }
 }
 
 impl SuffixTree {
+    /// Build a new suffix tree for `data` using Ukkonen's algorithm.
     pub fn new(data: &[u8]) -> SuffixTree {
         let mut nodes = Vec::<Node>::new();
         nodes.push(Node::new(0, 0));
@@ -41,6 +56,7 @@ impl SuffixTree {
         return tree;
     }
 
+    #[allow(unused_assignments)]
     fn extend_tree(&mut self, data: &[u8]) {
         let mut last_new_node: Option<usize> = None;
         let mut active_node: usize = 0;
@@ -90,7 +106,6 @@ impl SuffixTree {
                         // Make a suffix link to our next node
                         if last_new_node.is_some() {
                             self.nodes[last_new_node.unwrap()].suffix_link = Some(split);
-                            last_new_node = None;
                         }
                         last_new_node = Some(split);
                     }
@@ -161,7 +176,6 @@ impl SuffixTree {
                     // Make a suffix link to our next node
                     if last_new_node.is_some() {
                         self.nodes[last_new_node.unwrap()].suffix_link = Some(split);
-                        last_new_node = None;
                     }
                     last_new_node = Some(split);
                 }
@@ -225,6 +239,20 @@ impl SuffixTree {
     }
 }
 
+/// An iterator over all the [`Match`](struct.Match.html) bewteen two pieces of data.
+///
+/// # Examples
+/// 
+/// ```
+/// use bcmp::treematch::TreeMatchIterator;
+///
+/// let a = "abcdefg";
+/// let b = "012abc34cdef56efg78abcdefg";
+/// let match_iter = TreeMatchIterator::new(a.as_bytes(), b.as_bytes(), 2);
+/// for m in match_iter {
+///     println!("Match: {:}", &a[m.first_pos..m.first_end()]);
+/// }
+/// ```
 pub struct TreeMatchIterator<'a> {
     first: &'a [u8],
     second: &'a [u8],
@@ -238,6 +266,7 @@ pub struct TreeMatchIterator<'a> {
 }
 
 impl<'a> TreeMatchIterator<'a> {
+    /// Allocate a new iterator over the matches between two byte slices with a minimal matching length.
     pub fn new(first: &'a[u8], second: &'a [u8], minimal_length: usize) -> TreeMatchIterator<'a> {
         let tree = SuffixTree::new(first);
         TreeMatchIterator {
@@ -252,10 +281,12 @@ impl<'a> TreeMatchIterator<'a> {
             matched: HashMap::new()
         }
     }
-
+    /// Reset the iterator to its start. This allows to iterate multiple times over the matches 
+    /// without wasting time regenerating the `HashMap`.
     pub fn reset(&mut self) {
         self.i = 0;
         self.backtrace.clear();
+        self.matched.clear();
     }
 }
 

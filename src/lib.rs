@@ -3,6 +3,19 @@
 //! common substrings between two blob of data. The implementation relies on two different linear 
 //! time algorithms: a `HashMap` based algorithm called [`HashMatch`](hashmatch/index.html) and 
 //! a suffix tree built using Ukkonen algorithm called [`TreeMatch`](treematch/index.html).
+//!
+//! # Examples
+//! 
+//! ```
+//! use bcmp::{AlgoSpec, MatchIterator};
+//!
+//! let a = "abcdefg";
+//! let b = "012abc34cdef56efg78abcdefg";
+//! let match_iter = MatchIterator::new(a.as_bytes(), b.as_bytes(), AlgoSpec::HashMatch(2));
+//! for m in match_iter {
+//!     println!("Match: {:}", &a[m.first_pos..m.first_end()]);
+//! }
+//! ```
 
 extern crate bytepack;
 
@@ -13,7 +26,7 @@ mod tests;
 
 use std::iter::Iterator;
 
-use hashmatch::{HashMatchKey, HashMatchIterator};
+use hashmatch::HashMatchIterator;
 use treematch::TreeMatchIterator;
 
 /// A structure representing a matching substring between two pieces of data.
@@ -46,8 +59,8 @@ impl Match {
     }
 }
 
-/// An enumeration describing the algorithm specification: either `HashMatch` or `TreeMatch` with 
-/// the minimal matching length parameter.
+/// An enumeration describing the algorithm specification: either [`HashMatch`](hashmatch/index.html) 
+/// or [`TreeMatch`](treematch/index.html) with the minimal matching length parameter.
 #[derive(Clone,Copy,Debug)]
 pub enum AlgoSpec {
     /// The parameter is the minimal matching length which will determine the 
@@ -73,6 +86,14 @@ pub struct MatchIterator<'a> {
 }
 
 impl<'a> MatchIterator<'a> {
+    /// Build a new `MatchIterator` from two pieces of data to compare and an [`AlgoSpec`](enum.AlgoSpec.html).
+    ///
+    /// # Panics
+    ///
+    /// It will panic if the [`AlgoSpec`](enum.AlgoSpec.html) is not supported. 
+    /// [`TreeMatch`](treematch/index.html) supports any minimum matching length but 
+    /// [`HashMatch`](hashmatch/index.html) only supports length of 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 
+    /// 14, 16, 20, 24, 28, 32, 40, 48, 56 and 64 bytes.
     pub fn new(first: &'a [u8], second: &'a [u8], algo_spec: AlgoSpec) -> MatchIterator<'a> {
         MatchIterator {
             iter: match algo_spec {

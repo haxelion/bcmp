@@ -1,3 +1,5 @@
+extern crate rand;
+
 use AlgoSpec;
 use longest_common_substring;
 use longest_common_substrings;
@@ -155,4 +157,18 @@ fn stree() {
     let a = "ABABABC";
     let stree = SuffixTree::new(a.as_bytes());
     println!("{}", stree.to_graphviz(a.as_bytes()));
+}
+
+#[test]
+fn random_compare() {
+    let a : Vec<u8> = (0..1024).map(|_| (rand::random::<u8>() % 1) + b'a').collect();
+    let b : Vec<u8> = (0..1024).map(|_| (rand::random::<u8>() % 1) + b'a').collect();
+    for mml in [2,4,8].iter() {
+        let ms1 = longest_common_substrings(&a, &b, AlgoSpec::HashMatch(*mml), 100);
+        let ms2 = longest_common_substrings(&a, &b, AlgoSpec::TreeMatch(*mml), 100);
+        assert!(ms1.len() == ms2.len());
+        for i in 0..ms1.len() {
+            assert!(ms1[i] == ms2[i]);
+        }
+    }
 }

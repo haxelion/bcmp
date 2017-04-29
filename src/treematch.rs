@@ -137,6 +137,7 @@ impl SuffixTree {
             }
         }
         // Simulate end character by doing another step with false character 256
+        last_new_node = None;
         remaining_suffix += 1;
         while remaining_suffix > 0 {
             // Active length is zero, so the current character is *i* and no walk down is needed.

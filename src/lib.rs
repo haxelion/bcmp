@@ -53,7 +53,7 @@ use hashmatch::HashMatchIterator;
 use treematch::TreeMatchIterator;
 
 /// A structure representing a matching substring between two pieces of data.
-#[derive(Clone,Copy,Debug)]
+#[derive(Clone,Copy,Debug,PartialEq, Eq)]
 pub struct Match {
     /// Start of the string in the first piece of data.
     pub first_pos: usize,

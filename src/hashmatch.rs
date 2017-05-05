@@ -134,7 +134,7 @@ impl<'a, T: HashMatchKey> Iterator for HashMatchIterator<'a, T> {
                     self.i += 1;
                     // Check if this is a not part of a match already returned
                     let delta = first_pos as isize - self.j as isize;
-                    if !(self.matched.contains_key(&delta) && self.matched.get(&delta).unwrap() > &self.j) {
+                    if !(self.matched.contains_key(&delta) && self.matched.get(&delta).unwrap() >= &self.j) {
                         let first_data = self.first.get_ref();
                         let second_data = self.second.get_ref();
                         // Compute match length

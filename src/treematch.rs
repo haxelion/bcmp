@@ -68,7 +68,6 @@ impl SuffixTree {
             last_new_node = None;
             remaining_suffix += 1;
             while remaining_suffix > 0 {
-                // Active length is zero, so the current character is data[i] and no walk down is needed.
                 if active_length == 0 {
                     active_edge = data[i] as usize;
                 }
@@ -77,8 +76,8 @@ impl SuffixTree {
                     // to the next node.
                     if active_length >= self.nodes[next_node].edge_length() {
                         active_node = next_node;
-                        active_edge = data[self.nodes[next_node].end] as usize;
                         active_length -= self.nodes[next_node].edge_length();
+                        active_edge = data[i - active_length] as usize;
                         continue;
                     }
                     // Rule 3: the current character is on the edge
@@ -119,8 +118,8 @@ impl SuffixTree {
                     // Make a suffix link if there is a node waiting
                     if last_new_node.is_some() {
                         self.nodes[last_new_node.unwrap()].suffix_link = Some(active_node);
-                        last_new_node = None;
                     }
+                    last_new_node = Some(active_node);
                 }
                 
                 remaining_suffix -= 1;
@@ -148,9 +147,12 @@ impl SuffixTree {
             if let Some(next_node) = self.nodes[active_node].edges[active_edge] {
                 // If the active length is longer than the current edge, we walk down the edge
                 if active_length >= self.nodes[next_node].edge_length() {
-                    active_edge += self.nodes[next_node].edge_length();
                     active_length -= self.nodes[next_node].edge_length();
                     active_node = next_node;
+                    active_edge = match active_length {
+                       0 => 256,
+                       _ => data[data.len() - active_length] as usize
+                    };
                     continue;
                 }
                 else if self.nodes[next_node].start + active_length == data.len() {
@@ -190,8 +192,8 @@ impl SuffixTree {
                 // Make a suffix link if there is a node waiting
                 if last_new_node.is_some() {
                     self.nodes[last_new_node.unwrap()].suffix_link = Some(active_node);
-                    last_new_node = None;
                 }
+                last_new_node = Some(active_node);
             }
             
             remaining_suffix -= 1;
@@ -368,7 +370,7 @@ impl<'a> Iterator for TreeMatchIterator<'a> {
                         // Handle the match
                         let m = Match::new(self.tree.nodes[cur].end - self.depth, self.i, self.match_length);
                         let delta = m.first_pos as isize - m.second_pos as isize;
-                        if !(self.matched.contains_key(&delta) && self.matched.get(&delta).unwrap() > &m.second_pos) {
+                        if !(self.matched.contains_key(&delta) && self.matched.get(&delta).unwrap() >= &m.second_pos) {
                             self.matched.insert(delta, m.second_pos + m.length);
                             return Some(m);
                         }

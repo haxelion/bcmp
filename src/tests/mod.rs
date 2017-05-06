@@ -161,14 +161,35 @@ fn stree() {
 
 #[test]
 fn random_compare() {
-    let a : Vec<u8> = (0..10000).map(|_| (rand::random::<u8>() % 1) + b'a').collect();
-    let b : Vec<u8> = (0..10000).map(|_| (rand::random::<u8>() % 1) + b'a').collect();
-    for mml in [4,8].iter() {
-        let ms1 = longest_common_substrings(&a, &b, AlgoSpec::HashMatch(*mml), 1000);
-        let ms2 = longest_common_substrings(&a, &b, AlgoSpec::TreeMatch(*mml), 1000);
+    let a : Vec<u8> = (0..1000).map(|_| (rand::random::<u8>() % 2) + b'a').collect();
+    let b : Vec<u8> = (0..1000).map(|_| (rand::random::<u8>() % 2) + b'a').collect();
+    for mml in [2,4,8].iter() {
+        let ms1 = longest_common_substrings(&a, &b, AlgoSpec::HashMatch(*mml), 100);
+        let ms2 = longest_common_substrings(&a, &b, AlgoSpec::TreeMatch(*mml), 100);
         assert!(ms1.len() == ms2.len());
         for i in 0..ms1.len() {
-            assert!(ms1[i] == ms2[i]);
+            assert!(ms1[i].second_pos == ms2[i].second_pos);
+            assert!(ms1[i].length == ms2[i].length);
+        }
+    }
+}
+
+#[test]
+fn motif_compare() {
+    let mut motif = Vec::<u8>::new();
+    for i in 1..20 {
+        for _ in 0..i {
+            motif.push(0);
+        }
+        motif.push(i as u8);
+    }
+    for mml in [2,4,8].iter() {
+        let ms1 = longest_common_substrings(&motif, &motif, AlgoSpec::HashMatch(*mml), 100);
+        let ms2 = longest_common_substrings(&motif, &motif, AlgoSpec::TreeMatch(*mml), 100);
+        assert!(ms1.len() == ms2.len());
+        for i in 0..ms1.len() {
+            assert!(ms1[i].second_pos == ms2[i].second_pos);
+            assert!(ms1[i].length == ms2[i].length);
         }
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "bcmp"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Charles Hubain <github@haxelion.eu>"]
 description = "bcmp offers fast binary data comparison algorithms"
 categories = ["algorithms"]

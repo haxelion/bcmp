@@ -238,3 +238,30 @@ pub fn patch_set(first: &[u8], second: &[u8], algo_spec: AlgoSpec) -> Vec<Match>
     }
     return patches;
 }
+
+/// Find the list of unique strings from the second byte slice which can't be found in the first.
+/// 
+/// The [`AlgoSpec`](enum.AlgoSpec.html) highly influence the result because it determines the 
+/// minimal length of a match. The longer is the minimal length of a match, the more 
+/// unique strings will be found.
+pub fn unique_strings(first: &[u8], second: &[u8], algo_spec: AlgoSpec) -> Vec<(usize,usize)> {
+    let match_iter = MatchIterator::new(first, second, algo_spec);
+    let mut uniques = Vec::<(usize,usize)>::new();
+    let mut covered = 0;
+
+    for m in match_iter {
+        // There is a lapse in the second file coverage, add a unique string
+        if m.second_pos > covered {
+            uniques.push((covered, m.second_pos));
+        }
+        // If more of the file is covered, extend the coverage
+        if m.second_end() > covered {
+            covered = m.second_end();
+        }
+    }
+    if covered < second.len() {
+        uniques.push((covered, second.len()));
+    }
+
+    return uniques;
+}

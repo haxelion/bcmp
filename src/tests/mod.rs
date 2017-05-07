@@ -4,7 +4,7 @@ use AlgoSpec;
 use longest_common_substring;
 use longest_common_substrings;
 use patch_set;
-use hashmatch::unique_strings;
+use unique_strings;
 use treematch::SuffixTree;
 
 const ALGO_SPECS_4: &'static [AlgoSpec] = &[
@@ -110,45 +110,51 @@ fn ps3() {
 fn us1() {
     let a = "abcdefghijklmnopqrstuvwxyz";
     let b = "abcdef01ghijklmnop3456qrstuvwxyz";
-    let us = unique_strings::<u32>(a.as_bytes(), b.as_bytes());
-    assert!(us.len() == 2);
-    assert!(us[0].0 == 6);
-    assert!(us[0].1 == 8);
-    assert!(us[1].0 == 18);
-    assert!(us[1].1 == 22);
+    for algo_spec in ALGO_SPECS_4 {
+        let us = unique_strings(a.as_bytes(), b.as_bytes(), *algo_spec);
+        assert!(us.len() == 2);
+        assert!(us[0].0 == 6);
+        assert!(us[0].1 == 8);
+        assert!(us[1].0 == 18);
+        assert!(us[1].1 == 22);
+    }
 }
 
 #[test]
 fn us2() {
     let a = "abcdefghijklmnopqrstuvwxyz";
     let b = "01234";
-    let us = unique_strings::<u16>(a.as_bytes(), b.as_bytes());
-    assert!(us.len() == 1);
-    assert!(us[0].0 == 0);
-    assert!(us[0].1 == 5);
+    for algo_spec in ALGO_SPECS_4 {
+        let us = unique_strings(a.as_bytes(), b.as_bytes(), *algo_spec);
+        assert!(us.len() == 1);
+        assert!(us[0].0 == 0);
+        assert!(us[0].1 == 5);
+    }
 }
 
 #[test]
 fn us3() {
     let a = "abcdefghijklmnopqrstuvwxyz";
     let b = "1234abcd5678";
-    let us = unique_strings::<u8>(a.as_bytes(), b.as_bytes());
-    assert!(us.len() == 2);
-    assert!(us[0].0 == 0);
-    assert!(us[0].1 == 4);
-    assert!(us[1].0 == 8);
-    assert!(us[1].1 == 12);
+    for algo_spec in ALGO_SPECS_4 {
+        let us = unique_strings(a.as_bytes(), b.as_bytes(), *algo_spec);
+        assert!(us.len() == 2);
+        assert!(us[0].0 == 0);
+        assert!(us[0].1 == 4);
+        assert!(us[1].0 == 8);
+        assert!(us[1].1 == 12);
+    }
 }
 
 #[test]
 fn us4() {
     let a = "abcdefghijklmnopqrstuvwxyz";
     let b = "abcdefghaxelionijklmnopqrstuvwxyz";
-    let us = unique_strings::<u32>(a.as_bytes(), b.as_bytes());
+    let us = unique_strings(a.as_bytes(), b.as_bytes(), AlgoSpec::HashMatch(4));
     assert!(us.len() == 1);
     assert!(us[0].0 == 8);
     assert!(us[0].1 == 15);
-    let us = unique_strings::<u8>(a.as_bytes(), b.as_bytes());
+    let us = unique_strings(a.as_bytes(), b.as_bytes(), AlgoSpec::HashMatch(1));
     assert!(us.len() == 0);
 }
 

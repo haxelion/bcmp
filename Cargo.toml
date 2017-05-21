@@ -1,6 +1,6 @@
 [package]
 name = "bcmp"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Charles Hubain <github@haxelion.eu>"]
 description = "bcmp offers fast binary data comparison algorithms to enumerate common substrings, unique substrings or determine a patch set"
 categories = ["algorithms"]
@@ -13,7 +13,7 @@ license = "MIT"
 travis-ci = { repository = "haxelion/bcmp" }
 
 [dependencies]
-bytepack = "0.3.1"
+bytepack = "0.4"
 
 [dev-dependencies]
 rand = "0.3"
